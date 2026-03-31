@@ -1,0 +1,45 @@
+name: email-triage-env
+version: "1.0.0"
+description: >
+  An OpenEnv environment where AI agents learn to triage email inboxes.
+  Agents must categorize, prioritize, respond to, escalate, and archive
+  emails across three tasks of increasing complexity.
+tags:
+  - openenv
+  - email
+  - nlp
+  - real-world
+  - triage
+tasks:
+  - id: task_easy_categorize
+    difficulty: easy
+    description: Categorize 5 clearly-labeled emails into the correct category
+    max_steps: 8
+  - id: task_medium_prioritize_respond
+    difficulty: medium
+    description: Prioritize 6 emails and draft responses for flagged ones
+    max_steps: 12
+  - id: task_hard_full_triage
+    difficulty: hard
+    description: Full inbox triage — categorize, prioritize, respond, escalate, and archive 10 emails
+    max_steps: 20
+observation_space:
+  type: object
+  fields:
+    task_id: string
+    current_email: object
+    inbox_remaining: integer
+    step_number: integer
+    context: object
+action_space:
+  type: object
+  fields:
+    action_type: "one of: categorize, prioritize, respond, archive, escalate, skip"
+    category: "optional: work, personal, spam, newsletter, support, billing"
+    priority: "optional: urgent, high, normal, low"
+    response_text: optional string
+reward_range: [0.0, 1.0]
+api:
+  reset: POST /reset
+  step: POST /step
+  state: GET /state

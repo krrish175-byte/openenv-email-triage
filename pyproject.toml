@@ -11,11 +11,12 @@ dependencies = [
     "fastapi==0.111.0",
     "uvicorn[standard]==0.29.0",
     "pydantic==2.7.1",
-    "openai==1.30.0",
+    "openai>=2.7.2",
+    "openenv-core>=0.2.0",
 ]
 
-[project.optional-dependencies]
-dev = ["openenv-core"]
+[project.scripts]
+server = "app.server:app"
 
 [tool.openenv]
 name = "email-triage-env"

@@ -1,3 +1,14 @@
+---
+title: OpenEnv Email Triage
+emoji: 📧
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+tags:
+  - openenv
+---
+
 # Email Triage OpenEnv
 
 An OpenEnv environment where AI agents learn to triage email inboxes. Agents must categorize, prioritize, respond to, escalate, and archive emails across three tasks of increasing complexity.

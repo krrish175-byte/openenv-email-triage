@@ -16,9 +16,9 @@ dependencies = [
 ]
 
 [project.scripts]
-server = "app.server:app"
+server = "server.app:main"
 
 [tool.openenv]
 name = "email-triage-env"
 version = "1.0.0"
-entry_point = "app.server:app"
+entry_point = "server.app:main"

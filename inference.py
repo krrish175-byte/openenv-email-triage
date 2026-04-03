@@ -2,30 +2,27 @@
 Inference Script — Email Triage OpenEnv
 
 Required environment variables:
-  API_BASE_URL   The API endpoint for the LLM (e.g. https://router.huggingface.co/v1)
+  API_BASE_URL   The API endpoint for the LLM
   MODEL_NAME     The model identifier
   HF_TOKEN       Your Hugging Face / API key
-  ENV_URL        The URL where the OpenEnv server is running (default: http://localhost:7860)
-
-Usage:
-  python inference.py
 """
 
 import os
 import json
 import requests
+from typing import List, Optional
 from openai import OpenAI
-from typing import Dict, Any, List
 
-# ── Config ──────────────────────────────────────────
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 API_KEY      = os.getenv("HF_TOKEN") or os.getenv("API_KEY", "")
 MODEL_NAME   = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct")
 ENV_URL      = os.getenv("ENV_URL", "http://localhost:7860")
+BENCHMARK    = "email-triage"
 
-MAX_STEPS    = 20
-TEMPERATURE  = 0.1
-MAX_TOKENS   = 300
+MAX_STEPS = 20
+TEMPERATURE = 0.1
+MAX_TOKENS = 300
+SUCCESS_SCORE_THRESHOLD = 0.5
 
 TASK_IDS = [
     "task_easy_categorize",
@@ -33,7 +30,7 @@ TASK_IDS = [
     "task_hard_full_triage",
 ]
 
-SYSTEM_PROMPT = """You are an expert email triage assistant. 
+SYSTEM_PROMPT = """You are an expert email triage assistant.
 You will be shown one email at a time and must decide what to do with it.
 
 Respond with a single JSON object and nothing else. The JSON must have:
@@ -43,129 +40,164 @@ Respond with a single JSON object and nothing else. The JSON must have:
 - "response_text": a brief professional reply (if responding)
 - "reasoning": one sentence explaining your decision
 
-For each email, decide the MOST IMPORTANT action to take first.
 If an email is legal/compliance-related with terms like 'breach', 'legal', 'attorney', 'regulatory' — use "escalate".
 If an email is clearly spam — use "archive".
 Otherwise, "categorize" it first, then "prioritize" it in the next step.
 """
 
-def call_env(method: str, endpoint: str, data: Any = None) -> Dict[str, Any]:
+
+# ── Logging helpers (mandatory format) ──────────────────────────────────────
+
+def log_start(task: str, env: str, model: str) -> None:
+    print(f"[START] task={task} env={env} model={model}", flush=True)
+
+def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
+    error_val = error if error else "null"
+    done_val = str(done).lower()
+    # Sanitize action string to single line
+    action_str = action.replace("\n", " ").replace("\r", "")[:80]
+    print(f"[STEP] step={step} action={action_str} reward={reward:.2f} done={done_val} error={error_val}", flush=True)
+
+def log_end(success: bool, steps: int, rewards: List[float]) -> None:
+    rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+    print(f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}", flush=True)
+
+
+# ── Environment helpers ──────────────────────────────────────────────────────
+
+def call_env(method: str, endpoint: str, data=None):
     url = f"{ENV_URL}{endpoint}"
     try:
-        if method.upper() == "POST":
-            response = requests.post(url, json=data)
+        if method == "POST":
+            resp = requests.post(url, json=data or {}, timeout=30)
         else:
-            response = requests.get(url)
-        response.raise_for_status()
-        return response.json()
+            resp = requests.get(url, timeout=30)
+        resp.raise_for_status()
+        return resp.json()
     except Exception as e:
-        print(f"Error calling environment: {e}")
-        return {}
+        print(f"[DEBUG] ENV call failed {method} {endpoint}: {e}", flush=True)
+        return None
 
-def build_user_prompt(observation: Dict[str, Any]) -> str:
-    email = observation.get("current_email", {})
-    return f"""
-TASK DESCRIPTION: {observation.get('task_description')}
-STEP: {observation.get('step_number')} / {observation.get('max_steps')}
-EMAILS REMAINING: {observation.get('inbox_remaining')}
-LAST ACTION RESULT: {observation.get('last_action_result')}
+def build_user_prompt(obs: dict) -> str:
+    email = obs.get("current_email", {})
+    return (
+        f"Task: {obs.get('task_description', '')}\n\n"
+        f"Email #{obs.get('step_number', 0) + 1} of {obs.get('max_steps', 0)}:\n"
+        f"From: {email.get('sender', '')}\n"
+        f"Subject: {email.get('subject', '')}\n"
+        f"Body: {email.get('body', '')}\n\n"
+        f"Emails remaining: {obs.get('inbox_remaining', 0)}\n"
+        f"Last result: {obs.get('last_action_result', 'None')}\n\n"
+        f"Respond with a single JSON action object."
+    )
 
-CURRENT EMAIL:
-ID: {email.get('id')}
-From: {email.get('sender')}
-Subject: {email.get('subject')}
-Body: {email.get('body')}
-
-What action should be taken for this email?
-"""
-
-def parse_action(response_text: str) -> Dict[str, Any]:
+def parse_action(response_text: str) -> dict:
     try:
-        # Try to find JSON block if model wrapped it
-        if "```json" in response_text:
-            response_text = response_text.split("```json")[1].split("```")[0]
-        elif "{" in response_text:
-            response_text = response_text[response_text.find("{"):response_text.rfind("}")+1]
-        
-        action = json.loads(response_text)
-        return action
-    except Exception as e:
-        print(f"Failed to parse action: {e}. Raw response: {response_text}")
-        return {"action_type": "skip", "reasoning": "Parse failure"}
+        text = response_text.strip()
+        if "```" in text:
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+        return json.loads(text.strip())
+    except Exception:
+        return {"action_type": "skip"}
 
-def run_episode(client: OpenAI, task_id: str) -> Dict[str, Any]:
-    print(f"Starting Task: {task_id}")
-    obs_res = call_env("POST", "/reset", {"task_id": task_id})
-    if not obs_res:
-        return {"cumulative_reward": 0.0, "step_number": 0}
-    
-    observation = obs_res.get("observation")
-    done = False
-    cumulative_reward = 0.0
-    steps = 0
-    
-    while not done and steps < MAX_STEPS:
-        user_prompt = build_user_prompt(observation)
-        
-        chat_completion = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=TEMPERATURE,
-            max_tokens=MAX_TOKENS,
-            response_format={"type": "json_object"}
-        )
-        
-        raw_response = chat_completion.choices[0].message.content
-        action = parse_action(raw_response)
-        
-        step_res = call_env("POST", "/step", action)
-        if not step_res:
-            break
-            
-        observation = step_res.get("observation")
-        cumulative_reward += step_res.get("reward", 0.0)
-        done = step_res.get("done", False)
-        steps += 1
-        
-        info = step_res.get("info", {})
-        if done:
-            print(f"Task Complete: {task_id} | Score: {info.get('grader_score', 0.0):.4f} | Bonus: {info.get('bonus_awarded', False)}")
-            return {
-                "score": info.get("grader_score", 0.0),
-                "steps": steps,
-                "cumulative_reward": cumulative_reward
-            }
-            
-    return {"score": 0.0, "steps": steps, "cumulative_reward": cumulative_reward}
+
+# ── Episode runner ───────────────────────────────────────────────────────────
+
+def run_episode(client: OpenAI, task_id: str) -> dict:
+    rewards: List[float] = []
+    steps_taken = 0
+    success = False
+    final_score = 0.0
+
+    log_start(task=task_id, env=BENCHMARK, model=MODEL_NAME)
+
+    try:
+        result = call_env("POST", "/reset", {"task_id": task_id})
+        if not result:
+            log_end(success=False, steps=0, rewards=[])
+            return {"score": 0.0, "steps": 0}
+
+        obs = result.get("observation", {})
+
+        for step in range(1, MAX_STEPS + 1):
+            done = result.get("done", False)
+            if done:
+                break
+
+            user_prompt = build_user_prompt(obs)
+
+            try:
+                completion = client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=TEMPERATURE,
+                    max_tokens=MAX_TOKENS,
+                    stream=False,
+                )
+                response_text = completion.choices[0].message.content or ""
+            except Exception as e:
+                print(f"[DEBUG] Model request failed: {e}", flush=True)
+                response_text = '{"action_type": "skip"}'
+
+            action = parse_action(response_text)
+            action_str = action.get("action_type", "skip")
+
+            step_result = call_env("POST", "/step", action)
+            if not step_result:
+                log_step(step=step, action=action_str, reward=0.0, done=True, error="env_error")
+                break
+
+            reward_obj = step_result.get("reward", {})
+            reward = reward_obj.get("value", 0.0) if isinstance(reward_obj, dict) else 0.0
+            done = step_result.get("done", False)
+            error = obs.get("last_action_result") if "error" in str(obs.get("last_action_result", "")).lower() else None
+
+            rewards.append(reward)
+            steps_taken = step
+            obs = step_result.get("observation", {})
+
+            log_step(step=step, action=action_str, reward=reward, done=done, error=error)
+
+            if done:
+                final_score = step_result.get("info", {}).get("final_score", sum(rewards) / len(rewards) if rewards else 0.0)
+                break
+
+        success = final_score >= SUCCESS_SCORE_THRESHOLD
+
+    finally:
+        log_end(success=success, steps=steps_taken, rewards=rewards)
+
+    return {"score": final_score, "steps": steps_taken}
+
+
+# ── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
-    if not API_KEY:
-        print("Error: HF_TOKEN or API_KEY environment variable is required.")
-        return
-
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+    print("=" * 60, flush=True)
+    print("OpenEnv Email Triage — Baseline Inference Results", flush=True)
+    print("=" * 60, flush=True)
+
     results = {}
+    for task_id in TASK_IDS:
+        print(f"Starting Task: {task_id}", flush=True)
+        res = run_episode(client, task_id)
+        results[task_id] = res
+        print(f"Task Complete: {task_id} | Score: {res['score']:.4f} | Steps: {res['steps']}", flush=True)
 
-    print("============================================================")
-    print("OpenEnv Email Triage — Baseline Inference Results")
-    
-    for tid in TASK_IDS:
-        res = run_episode(client, tid)
-        results[tid] = res
+    print("=" * 60, flush=True)
+    for task_id, res in results.items():
+        print(f"Task: {task_id:<35} | Score: {res['score']:.4f} | Steps: {res['steps']}", flush=True)
+    avg = sum(r["score"] for r in results.values()) / len(results)
+    print(f"Average Score: {avg:.4f}", flush=True)
+    print("=" * 60, flush=True)
 
-    print("============================================================")
-    total_score = 0.0
-    for tid, res in results.items():
-        score = res.get("score", 0.0)
-        steps = res.get("steps", 0)
-        print(f"Task: {tid:<35} | Score: {score:.4f} | Steps: {steps}")
-        total_score += score
-    
-    avg_score = total_score / len(TASK_IDS)
-    print(f"Average Score: {avg_score:.4f}")
 
 if __name__ == "__main__":
     main()

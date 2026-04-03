@@ -153,7 +153,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
                 break
 
             reward_obj = step_result.get("reward", {})
-            reward = reward_obj.get("value", 0.0) if isinstance(reward_obj, dict) else 0.0
+            reward = reward_obj.get("value", reward_obj) if isinstance(reward_obj, dict) else float(reward_obj or 0.0)
             done = step_result.get("done", False)
             error = obs.get("last_action_result") if "error" in str(obs.get("last_action_result", "")).lower() else None
 
@@ -164,7 +164,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
             log_step(step=step, action=action_str, reward=reward, done=done, error=error)
 
             if done:
-                final_score = step_result.get("info", {}).get("final_score", sum(rewards) / len(rewards) if rewards else 0.0)
+                final_score = step_result.get("info", {}).get("final_score", step_result.get("info", {}).get("cumulative_reward", sum(rewards) / len(rewards) if rewards else 0.0))
                 break
 
         success = final_score >= SUCCESS_SCORE_THRESHOLD

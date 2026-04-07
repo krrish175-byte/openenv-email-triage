@@ -34,6 +34,7 @@ def grader_easy(actions_taken: List[dict], emails: List[dict]) -> Tuple[float, d
         "correct_categorizations": correct_ratio,
         "emails_processed": processed_ratio
     }
+    score = float(max(0.001, min(0.999, score)))
     return score, partial_scores
 
 # ── TASK 2: MEDIUM ────────────────────────────────────
@@ -87,6 +88,7 @@ def grader_medium(actions_taken: List[dict], emails: List[dict]) -> Tuple[float,
         "response_quality": resp_score,
         "emails_processed": processed_ratio
     }
+    score = float(max(0.001, min(0.999, score)))
     return score, partial_scores
 
 # ── TASK 3: HARD ──────────────────────────────────────
@@ -153,6 +155,7 @@ def grader_hard(actions_taken: List[dict], emails: List[dict]) -> Tuple[float, d
         "response_score": resp_score,
         "archive_score": arch_score
     }
+    score = float(max(0.001, min(0.999, score)))
     return score, partial_scores
 
 TASKS = {

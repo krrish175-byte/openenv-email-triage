@@ -56,7 +56,7 @@ Requires prioritizing 6 emails and drafting brief, relevant responses for select
 A full inbox triage of 10 emails. Agents must categorize, prioritize, respond where needed, escalate legal/compliance issues, and archive spam. Scoring is a weighted average across all triage criteria.
 
 ## Reward Structure
-The environment provides dense rewards between 0.0 and 1.0 at each step:
+The environment provides dense rewards between 0.01 and 0.99 at each step:
 - **Baseline:** 0.5 per step.
 - **Bonuses:** Up to +0.2 for correct actions (categorization, escalation, etc.).
 - **Response Quality:** Scaled based on length and keyword relevance.

@@ -134,9 +134,15 @@ class EmailTriageEnv:
                 self._cumulative_reward += 0.3
                 final_info["bonus_awarded"] = True
 
+        reward_obj = Reward(
+            value=step_reward,
+            partial_scores={},
+            message=msg
+        )
+
         return StepResult(
             observation=self._make_observation(),
-            reward=step_reward,
+            reward=reward_obj,
             done=self._done,
             info=final_info
         )

@@ -38,7 +38,7 @@ class Reward(BaseModel):
 class StepResult(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     observation: Observation
-    reward: float
+    reward: Reward
     done: bool
     info: Dict[str, Any]
 

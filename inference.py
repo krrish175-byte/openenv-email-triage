@@ -117,7 +117,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
         result = call_env("POST", "/reset", {"task_id": task_id})
         if not result:
             log_end(success=False, steps=0, rewards=[])
-            return {"score": 0.0, "steps": 0}
+            return {"score": 0.001, "steps": 0}
 
         obs = result.get("observation", {})
 
@@ -149,7 +149,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
 
             step_result = call_env("POST", "/step", action)
             if not step_result:
-                log_step(step=step, action=action_str, reward=0.0, done=True, error="env_error")
+                log_step(step=step, action=action_str, reward=0.001, done=True, error="env_error")
                 break
 
             reward_obj = step_result.get("reward", {})
@@ -164,7 +164,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
             log_step(step=step, action=action_str, reward=reward, done=done, error=error)
 
             if done:
-                final_score = step_result.get("info", {}).get("final_score", step_result.get("info", {}).get("cumulative_reward", sum(rewards) / len(rewards) if rewards else 0.0))
+                final_score = step_result.get("info", {}).get("final_score", step_result.get("info", {}).get("grader_score", step_result.get("info", {}).get("cumulative_reward", sum(rewards) / len(rewards) if rewards else 0.001)))
                 break
 
         success = final_score >= SUCCESS_SCORE_THRESHOLD
@@ -172,6 +172,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
     finally:
         log_end(success=success, steps=steps_taken, rewards=rewards)
 
+    final_score = max(0.001, min(0.999, float(final_score)))
     return {"score": final_score, "steps": steps_taken}
 
 

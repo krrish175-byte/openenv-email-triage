@@ -102,7 +102,7 @@ class EmailTriageEnv:
         reward_delta -= 0.02
         
         # Intermediate step reward logic: 0.5 + delta
-        step_reward = max(0.0, min(1.0, 0.5 + reward_delta))
+        step_reward = max(0.001, min(0.999, 0.5 + reward_delta))
         self._cumulative_reward += step_reward
         self._last_action_result = msg
 

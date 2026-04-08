@@ -109,7 +109,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
     rewards: List[float] = []
     steps_taken = 0
     success = False
-    final_score = 0.05
+    final_score = 0.01
 
     log_start(task=task_id, env=BENCHMARK, model=MODEL_NAME)
 
@@ -117,7 +117,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
         result = call_env("POST", "/reset", {"task_id": task_id})
         if not result:
             log_end(success=False, steps=0, rewards=[])
-            return {"score": 0.05, "steps": 0}
+            return {"score": 0.0, "steps": 0}
 
         obs = result.get("observation", {})
 
@@ -149,7 +149,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
 
             step_result = call_env("POST", "/step", action)
             if not step_result:
-                log_step(step=step, action=action_str, reward=0.05, done=True, error="env_error")
+                log_step(step=step, action=action_str, reward=0.01, done=True, error="env_error")
                 break
 
             reward_obj = step_result.get("reward", {})
@@ -164,7 +164,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
             log_step(step=step, action=action_str, reward=reward, done=done, error=error)
 
             if done:
-                final_score = step_result.get("info", {}).get("final_score", step_result.get("info", {}).get("grader_score", step_result.get("info", {}).get("cumulative_reward", sum(rewards) / len(rewards) if rewards else 0.05)))
+                final_score = step_result.get("info", {}).get("final_score", step_result.get("info", {}).get("grader_score", step_result.get("info", {}).get("cumulative_reward", sum(rewards) / len(rewards) if rewards else 0.01)))
                 break
 
         success = final_score >= SUCCESS_SCORE_THRESHOLD
@@ -172,7 +172,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
     finally:
         log_end(success=success, steps=steps_taken, rewards=rewards)
 
-    final_score = max(0.05, min(0.95, float(final_score)))
+    final_score = max(0.01, min(0.99, float(final_score)))
     return {"score": final_score, "steps": steps_taken}
 
 

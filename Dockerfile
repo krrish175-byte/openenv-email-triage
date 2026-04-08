@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM public.ecr.aws/docker/library/python:3.11-slim
 
 WORKDIR /app
 
@@ -11,4 +11,4 @@ EXPOSE 7860
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["uvicorn", "app.server:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uvicorn", "app.server:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]

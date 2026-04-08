@@ -26,7 +26,7 @@ def grader_easy(actions_taken: List[dict], emails: List[dict]) -> Tuple[float, d
     processed_ratio = len(processed_ids) / total
     
     score = float(0.7 * correct_ratio + 0.3 * processed_ratio)
-    score = max(0.05, min(0.95, score))
+    score = max(0.01, min(0.99, score))
     
     partial_scores = {
         "correct_categorizations": correct_ratio,
@@ -77,7 +77,7 @@ def grader_medium(actions_taken: List[dict], emails: List[dict]) -> Tuple[float,
     processed_ratio = len(processed_ids) / total
     
     score = float(0.4 * prio_score + 0.4 * resp_score + 0.2 * processed_ratio)
-    score = max(0.05, min(0.95, score))
+    score = max(0.01, min(0.99, score))
     
     partial_scores = {
         "priority_accuracy": prio_score,
@@ -140,7 +140,7 @@ def grader_hard(actions_taken: List[dict], emails: List[dict]) -> Tuple[float, d
     arch_score = arch_correct / len(emails_arch) if emails_arch else 1.0
     
     score = float(0.20 * cat_score + 0.20 * prio_score + 0.25 * esc_score + 0.25 * resp_score + 0.10 * arch_score)
-    score = max(0.05, min(0.95, score))
+    score = max(0.01, min(0.99, score))
     
     partial_scores = {
         "categorization_score": cat_score,

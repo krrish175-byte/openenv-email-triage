@@ -1,8 +1,8 @@
 import uuid
 import copy
 from typing import Optional, List, Dict, Any
-from app.models import Email, Observation, Action, Reward, StepResult, ResetResult, StateResult
-from app.tasks import TASKS, GRADERS
+from server.models import Email, Observation, Action, Reward, StepResult, ResetResult, StateResult
+from server.tasks import TASKS, GRADERS
 
 class EmailTriageEnv:
     def __init__(self):

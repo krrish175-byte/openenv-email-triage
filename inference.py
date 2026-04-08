@@ -164,7 +164,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
             log_step(step=step, action=action_str, reward=reward, done=done, error=error)
 
             if done:
-                final_score = step_result.get("info", {}).get("grader_score", step_result.get("info", {}).get("cumulative_reward", sum(rewards) / len(rewards) if rewards else 0.0))
+                final_score = step_result.get("info", {}).get("final_score", step_result.get("info", {}).get("cumulative_reward", sum(rewards) / len(rewards) if rewards else 0.0))
                 break
 
         success = final_score >= SUCCESS_SCORE_THRESHOLD

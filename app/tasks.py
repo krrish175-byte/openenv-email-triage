@@ -25,16 +25,13 @@ def grader_easy(actions_taken: List[dict], emails: List[dict]) -> Tuple[float, d
     correct_ratio = correct_count / total
     processed_ratio = len(processed_ids) / total
     
-    # final score = 0.7 * correct_ratio + 0.3 * processed_ratio
-    score = 0.7 * correct_ratio + 0.3 * processed_ratio
-    # Ensure score is strictly 0.0 - 1.0 but not 1.0 unless perfect
-    score = min(max(score, 0.001), 0.999)
+    score = float(0.7 * correct_ratio + 0.3 * processed_ratio)
+    score = max(0.01, min(0.99, score))
     
     partial_scores = {
         "correct_categorizations": correct_ratio,
         "emails_processed": processed_ratio
     }
-    score = float(max(0.001, min(0.999, score)))
     return score, partial_scores
 
 # ── TASK 2: MEDIUM ────────────────────────────────────
@@ -79,16 +76,14 @@ def grader_medium(actions_taken: List[dict], emails: List[dict]) -> Tuple[float,
     resp_score = response_quality / len(emails_requiring_resp) if emails_requiring_resp else 1.0
     processed_ratio = len(processed_ids) / total
     
-    # final = 0.4 * priority_score + 0.4 * response_quality + 0.2 * processed_ratio
-    score = 0.4 * prio_score + 0.4 * resp_score + 0.2 * processed_ratio
-    score = min(max(score, 0.001), 0.999)
+    score = float(0.4 * prio_score + 0.4 * resp_score + 0.2 * processed_ratio)
+    score = max(0.01, min(0.99, score))
     
     partial_scores = {
         "priority_accuracy": prio_score,
         "response_quality": resp_score,
         "emails_processed": processed_ratio
     }
-    score = float(max(0.001, min(0.999, score)))
     return score, partial_scores
 
 # ── TASK 3: HARD ──────────────────────────────────────
@@ -144,9 +139,8 @@ def grader_hard(actions_taken: List[dict], emails: List[dict]) -> Tuple[float, d
     resp_score = resp_quality / len(emails_resp) if emails_resp else 1.0
     arch_score = arch_correct / len(emails_arch) if emails_arch else 1.0
     
-    # final = 0.20 * categorization + 0.20 * priority + 0.25 * escalation + 0.25 * response + 0.10 * archive
-    score = 0.20 * cat_score + 0.20 * prio_score + 0.25 * esc_score + 0.25 * resp_score + 0.10 * arch_score
-    score = min(max(score, 0.001), 0.999)
+    score = float(0.20 * cat_score + 0.20 * prio_score + 0.25 * esc_score + 0.25 * resp_score + 0.10 * arch_score)
+    score = max(0.01, min(0.99, score))
     
     partial_scores = {
         "categorization_score": cat_score,
@@ -155,7 +149,6 @@ def grader_hard(actions_taken: List[dict], emails: List[dict]) -> Tuple[float, d
         "response_score": resp_score,
         "archive_score": arch_score
     }
-    score = float(max(0.001, min(0.999, score)))
     return score, partial_scores
 
 TASKS = {

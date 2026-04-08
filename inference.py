@@ -56,10 +56,10 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
     done_val = str(done).lower()
     # Sanitize action string to single line
     action_str = action.replace("\n", " ").replace("\r", "")[:80]
-    print(f"[STEP] step={step} action={action_str} reward={reward:.2f} done={done_val} error={error_val}", flush=True)
+    print(f"[STEP] step={step} action={action_str} reward={reward:.4f} done={done_val} error={error_val}", flush=True)
 
 def log_end(success: bool, steps: int, rewards: List[float]) -> None:
-    rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+    rewards_str = ",".join(f"{r:.4f}" for r in rewards)
     print(f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}", flush=True)
 
 
@@ -172,7 +172,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
     finally:
         log_end(success=success, steps=steps_taken, rewards=rewards)
 
-    final_score = max(0.001, min(0.999, float(final_score)))
+    final_score = max(0.01, min(0.99, float(final_score)))
     return {"score": final_score, "steps": steps_taken}
 
 

@@ -14,7 +14,7 @@ class EmailTriageEnv:
         self._current_index = 0
         self._step_num = 0
         self._done = False
-        self._cumulative_reward = 0.0
+        self._cumulative_reward = 0.01
         self._episode_id = str(uuid.uuid4())
         self._actions_taken = []
         self._last_action_result = None
@@ -102,7 +102,7 @@ class EmailTriageEnv:
         reward_delta -= 0.02
         
         # Intermediate step reward logic: 0.5 + delta
-        step_reward = max(0.001, min(0.999, 0.5 + reward_delta))
+        step_reward = max(0.01, min(0.99, 0.5 + reward_delta))
         self._cumulative_reward += step_reward
         self._last_action_result = msg
 
@@ -146,7 +146,7 @@ class EmailTriageEnv:
             task_id=self._task_id or "",
             step_number=self._step_num,
             done=self._done,
-            cumulative_reward=self._cumulative_reward,
+            cumulative_reward=max(0.01, min(0.99, self._cumulative_reward)),
             episode_id=self._episode_id,
             emails_processed=self._current_index
         )

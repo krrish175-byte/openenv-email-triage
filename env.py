@@ -14,7 +14,7 @@ class EmailTriageEnv:
         self._current_index = 0
         self._step_num = 0
         self._done = False
-        self._cumulative_reward = 0.05
+        self._cumulative_reward = 0.0
         self._episode_id = str(uuid.uuid4())
         self._actions_taken = []
         self._last_action_result = None
@@ -36,7 +36,7 @@ class EmailTriageEnv:
         if self._done:
             return StepResult(
                 observation=self._make_observation(),
-                reward=0.05,
+                reward=0.0,
                 done=True,
                 info={"message": "Episode already finished"}
             )
@@ -102,7 +102,7 @@ class EmailTriageEnv:
         reward_delta -= 0.02
         
         # Intermediate step reward logic: 0.5 + delta
-        step_reward = max(0.05, min(0.95, 0.5 + reward_delta))
+        step_reward = max(0.0, min(1.0, 0.5 + reward_delta))
         self._cumulative_reward += step_reward
         self._last_action_result = msg
 
@@ -127,7 +127,7 @@ class EmailTriageEnv:
             grader = GRADERS[self._task_id]
             final_score, extra_info = grader(self._actions_taken, self._emails)
             final_info.update(extra_info)
-            final_info["final_score"] = final_score
+            final_info["grader_score"] = final_score
             
             # Bonus of 0.3 if final_score >= 0.8
             if final_score >= 0.8:
@@ -146,7 +146,7 @@ class EmailTriageEnv:
             task_id=self._task_id or "",
             step_number=self._step_num,
             done=self._done,
-            cumulative_reward=max(0.05, min(0.95, self._cumulative_reward)),
+            cumulative_reward=self._cumulative_reward,
             episode_id=self._episode_id,
             emails_processed=self._current_index
         )

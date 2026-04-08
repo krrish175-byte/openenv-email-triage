@@ -1,14 +1,3 @@
----
-title: OpenEnv Email Triage
-emoji: 📧
-colorFrom: blue
-colorTo: green
-sdk: docker
-pinned: false
-tags:
-  - openenv
----
-
 # Email Triage OpenEnv
 
 An OpenEnv environment where AI agents learn to triage email inboxes. Agents must categorize, prioritize, respond to, escalate, and archive emails across three tasks of increasing complexity.
@@ -110,12 +99,3 @@ The environment provides dense rewards between 0.0 and 1.0 at each step:
 - `MODEL_NAME`: Identifier for the model to use
 - `HF_TOKEN`: API key for authentication
 - `ENV_URL`: URL of the triage server (default: http://localhost:7860)
-
-## Final Baseline Scores
-
-| Task                            | Model                            | Score  |
-|---------------------------------|----------------------------------|--------|
-| task_easy_categorize            | meta-llama/Llama-3.1-8B-Instruct | 0.5940 |
-| task_medium_prioritize_respond  | meta-llama/Llama-3.1-8B-Instruct | 0.5800 |
-| task_hard_full_triage           | meta-llama/Llama-3.1-8B-Instruct | 0.6000 |
-| **Average**                     |                                  | **0.5913** |

@@ -56,3 +56,11 @@ async def get_tasks():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+def main():
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=7860)
+
+if __name__ == "__main__":
+    main()
+
